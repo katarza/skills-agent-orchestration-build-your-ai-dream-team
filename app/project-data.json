@@ -1,0 +1,39 @@
+{
+  "projects": [
+    {
+      "name": "Contributor Onboarding",
+      "owner": "Mona Patel",
+      "status": "On track",
+      "recentActivity": "Updated the contributor starter checklist after the August cohort.",
+      "priority": "High"
+    },
+    {
+      "name": "Documentation Refresh",
+      "owner": "Elliot Chen",
+      "status": "At risk",
+      "recentActivity": "Awaiting technical review for the deployment guide rewrite.",
+      "priority": "Medium"
+    },
+    {
+      "name": "Community Office Hours",
+      "owner": "Sofia Ramirez",
+      "status": "On track",
+      "recentActivity": "Published the September facilitation schedule and volunteer rota.",
+      "priority": "Low"
+    },
+    {
+      "name": "Accessibility Audit",
+      "owner": "Jordan Williams",
+      "status": "Blocked",
+      "recentActivity": "Paused keyboard testing while the staging environment is repaired.",
+      "priority": "High"
+    },
+    {
+      "name": "Release Notes Toolkit",
+      "owner": "Avery Kim",
+      "status": "At risk",
+      "recentActivity": "Collected maintainer feedback on the automated changelog template.",
+      "priority": "Medium"
+    }
+  ]
+}

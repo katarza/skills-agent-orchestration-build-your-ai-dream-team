@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Project Pulse</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="dashboard">
+      <header class="hero">
+        <p class="eyebrow">Contributor workspace</p>
+        <h1>Project Pulse</h1>
+        <p class="hero-copy">A calm, shared view of the work contributors are moving forward.</p>
+      </header>
+
+      <section class="summary-section" aria-labelledby="summary-heading">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Portfolio overview</p>
+            <h2 id="summary-heading">What needs attention</h2>
+          </div>
+          <p id="summary-description" class="summary-description" aria-live="polite">Loading project summary…</p>
+        </div>
+        <div id="summary" class="summary-grid" aria-live="polite"></div>
+      </section>
+
+      <section class="projects-section" aria-labelledby="projects-heading">
+        <div class="section-heading projects-heading">
+          <div>
+            <p class="eyebrow">Project portfolio</p>
+            <h2 id="projects-heading">Current work</h2>
+          </div>
+          <p id="result-count" class="result-count" aria-live="polite"></p>
+        </div>
+
+        <div class="filter-group" aria-labelledby="filter-label">
+          <span id="filter-label" class="filter-label">Filter by status</span>
+          <div id="filters" class="filters" role="group" aria-label="Project status filters"></div>
+        </div>
+
+        <div id="loading-state" class="state-panel loading-state" role="status">
+          <span class="loading-dot" aria-hidden="true"></span>
+          Loading contributor projects…
+        </div>
+        <div id="error-state" class="state-panel error-state" role="alert" hidden></div>
+        <div id="empty-state" class="state-panel empty-state" aria-live="polite" hidden>
+          <strong>No projects match this status.</strong>
+          <span>Try another filter to see the rest of the portfolio.</span>
+        </div>
+        <div id="project-grid" class="project-grid" aria-live="polite"></div>
+      </section>
+    </main>
+
+    <script>
+      (() => {
+        const requiredFields = ["name", "owner", "status", "recentActivity", "priority"];
+        const summary = document.getElementById("summary");
+        const summaryDescription = document.getElementById("summary-description");
+        const filters = document.getElementById("filters");
+        const resultCount = document.getElementById("result-count");
+        const projectGrid = document.getElementById("project-grid");
+        const loadingState = document.getElementById("loading-state");
+        const errorState = document.getElementById("error-state");
+        const emptyState = document.getElementById("empty-state");
+        let projects = [];
+        let selectedStatus = "All";
+
+        function isValidProject(project) {
+          return project && typeof project === "object" &&
+            requiredFields.every((field) => typeof project[field] === "string" && project[field].trim());
+        }
+
+        function badgeClass(value) {
+          return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+        }
+
+        function createTextElement(tagName, className, text) {
+          const element = document.createElement(tagName);
+          if (className) element.className = className;
+          element.textContent = text;
+          return element;
+        }
+
+        function renderSummary() {
+          const statusCounts = new Map();
+          projects.forEach((project) => statusCounts.set(project.status, (statusCounts.get(project.status) || 0) + 1));
+          const activeCount = projects.length;
+          const atRiskCount = (statusCounts.get("At risk") || 0) + (statusCounts.get("Blocked") || 0);
+          const summaryItems = [
+            [String(activeCount), activeCount === 1 ? "Active project" : "Active projects"],
+            [String(atRiskCount), atRiskCount === 1 ? "Needs attention" : "Need attention"],
+            [String(statusCounts.get("On track") || 0), "On track"]
+          ];
+
+          summary.replaceChildren(...summaryItems.map(([value, label]) => {
+            const item = document.createElement("div");
+            item.className = "summary-card";
+            item.append(createTextElement("strong", "summary-value", value));
+            item.append(createTextElement("span", "summary-label", label));
+            return item;
+          }));
+          summaryDescription.textContent = "A quick read on active contributor work.";
+        }
+
+        function renderFilters() {
+          const statuses = [...new Set(projects.map((project) => project.status))];
+          filters.replaceChildren(...["All", ...statuses].map((status) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "filter-button";
+            button.textContent = status;
+            button.setAttribute("aria-pressed", String(status === selectedStatus));
+            button.addEventListener("click", () => {
+              selectedStatus = status;
+              renderFilters();
+              renderProjects();
+            });
+            return button;
+          }));
+        }
+
+        function createProjectCard(project) {
+          const card = document.createElement("article");
+          card.className = "project-card";
+          const header = document.createElement("div");
+          header.className = "card-header";
+          header.append(createTextElement("h3", "project-name", project.name));
+          header.append(createTextElement("p", "project-owner", `Owner: ${project.owner}`));
+
+          const badges = document.createElement("div");
+          badges.className = "badges";
+          const statusBadge = createTextElement("span", `badge status-${badgeClass(project.status)}`, project.status);
+          statusBadge.setAttribute("aria-label", `Status: ${project.status}`);
+          const priorityBadge = createTextElement("span", `badge priority-${badgeClass(project.priority)}`, `${project.priority} priority`);
+          priorityBadge.setAttribute("aria-label", `Priority: ${project.priority}`);
+          badges.append(statusBadge, priorityBadge);
+
+          const activity = document.createElement("div");
+          activity.className = "activity";
+          activity.append(createTextElement("span", "activity-label", "Recent activity"));
+          activity.append(createTextElement("p", "activity-copy", project.recentActivity));
+          card.append(header, badges, activity);
+          return card;
+        }
+
+        function renderProjects() {
+          const visibleProjects = selectedStatus === "All"
+            ? projects
+            : projects.filter((project) => project.status === selectedStatus);
+          projectGrid.replaceChildren(...visibleProjects.map(createProjectCard));
+          resultCount.textContent = `${visibleProjects.length} ${visibleProjects.length === 1 ? "project" : "projects"} shown`;
+          emptyState.hidden = visibleProjects.length !== 0;
+        }
+
+        function showError(message) {
+          loadingState.hidden = true;
+          errorState.textContent = message;
+          errorState.hidden = false;
+          summaryDescription.textContent = "Project summary unavailable.";
+        }
+
+        async function loadProjects() {
+          try {
+            const response = await fetch("project-data.json");
+            if (!response.ok) throw new Error(`The server returned ${response.status}.`);
+            const data = await response.json();
+            if (!data || !Array.isArray(data.projects)) {
+              throw new Error("The project data has an invalid format.");
+            }
+            projects = data.projects.filter(isValidProject);
+            if (projects.length !== data.projects.length || projects.length === 0) {
+              throw new Error("The project data is incomplete or contains no valid projects.");
+            }
+            loadingState.hidden = true;
+            renderSummary();
+            renderFilters();
+            renderProjects();
+          } catch (error) {
+            showError(`Project data could not be loaded. ${error.message}`);
+          }
+        }
+
+        loadProjects();
+      })();
+    </script>
+  </body>
+</html>
